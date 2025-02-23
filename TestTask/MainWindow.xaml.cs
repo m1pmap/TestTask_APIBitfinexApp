@@ -24,9 +24,10 @@ public partial class MainWindow : Window
     public MainWindow(ITestConnector testConnectorService)
     {
         InitializeComponent();
-
         _testConnectorService = testConnectorService;
 
-        _testConnectorService.GetNewTradesAsync("BTCUSD", 12);
+        //_testConnectorService.GetNewTradesAsync("BTCUSD", 12);
+
+        _testConnectorService.GetCandleSeriesAsync("ETHUSD", 15, DateTimeOffset.UtcNow.AddHours(-1).AddHours(-1), count:  5);
     }
 }

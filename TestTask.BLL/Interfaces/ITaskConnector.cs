@@ -13,7 +13,7 @@ namespace TestTask.BLL.Interfaces
         #region Rest
 
         Task<IEnumerable<Trade>> GetNewTradesAsync(string pair, int maxCount);
-        Task<IEnumerable<Candle>> GetCandleSeriesAsync(string pair, int periodInSec, DateTimeOffset? from, DateTimeOffset? to = null, long? count = 0);
+        Task<IEnumerable<Candle>> GetCandleSeriesAsync(string pair, int periodInMin, DateTimeOffset? from, DateTimeOffset? to = null, long? count = 100);
 
         #endregion
 
