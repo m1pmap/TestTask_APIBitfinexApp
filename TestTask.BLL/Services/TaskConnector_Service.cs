@@ -3,44 +3,36 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Metadata;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TestTask.BLL.Interfaces;
 using TestTask.BLL.Models;
+using Websocket.Client;
 
 namespace TestTask.BLL.Services
 {
     public class TaskConnector_Service : ITestConnector
     {
+        private WebsocketClient _client;
         public event Action<Trade> NewBuyTrade;
         public event Action<Trade> NewSellTrade;
         public event Action<Candle> CandleSeriesProcessing;
+
+        private long _lastCandleTime = 0; 
 
         public async Task<IEnumerable<Candle>> GetCandleSeriesAsync(string pair, int periodInMin, DateTimeOffset? from, DateTimeOffset? to = null, long? count = 100)
         {
             using(HttpClient client = new HttpClient())
             {
-                string timeframe = periodInMin switch
-                {
-                    1 => "1m",
-                    5 => "5m",
-                    15 => "15m",
-                    30 => "30m",
-                    60 => "1h",
-                    240 => "4h",
-                    1440 => "1D",
-                    10080 => "7D",
-                    20160 => "14D",
-                    43200 => "1M",
-                    _ => throw new ArgumentException("Invalid period")
-                };
+                
 
                 long? periodStartMs = from?.ToUnixTimeMilliseconds();
                 long? periodEndMs = to?.ToUnixTimeMilliseconds();
 
-                string bitfinexCandleAPIurl = $"https://api-pub.bitfinex.com/v2/candles/trade:{timeframe}:t{pair}/hist?limit={count}&start={periodStartMs}&end={periodEndMs}";
+                string bitfinexCandleAPIurl = $"https://api-pub.bitfinex.com/v2/candles/trade:{GetTimeFrameByMin(periodInMin)}:t{pair}/hist?limit={count}&start={periodStartMs}&end={periodEndMs}";
 
                 //Отправка запроса
                 HttpResponseMessage response = await client.GetAsync(bitfinexCandleAPIurl);
@@ -113,14 +105,89 @@ namespace TestTask.BLL.Services
         }
 
 
-        public void SubscribeCandles(string pair, int periodInSec, DateTimeOffset? from = null, DateTimeOffset? to = null, long? count = 0)
+        public void SubscribeCandles(string pair, int periodInMin, long? count = 0)
         {
-            throw new NotImplementedException();
+            string wsUrl = "wss://api-pub.bitfinex.com/ws/2";
+            _client = new WebsocketClient(new Uri(wsUrl));
+
+            _client.MessageReceived.Subscribe(msg =>
+            {
+                Debug.WriteLine(msg.Text);
+                var jsonDoc = JsonDocument.Parse(msg.Text);
+                var root = jsonDoc.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array) //Проверка на то что прислан массив с данными трейдов, а не ответ от сервера о подписке
+                {
+                    //Debug.WriteLine(root[1].ValueKind);
+                    if (root[1].ValueKind == JsonValueKind.Array) //Проверка на наличие данных о новой свече, а не hb
+                    {
+                        var candleData = root[1];
+                        //Проверка на то что это именно массив с новой свечой, а не с историей прошлых свечей за недавнее время
+                        if(candleData.GetArrayLength() == 6)
+                        {
+                            //Проверка на то что принимается именно новая свеча, потому что API возвращает прежние значения текущей(формирующей) свечи и 2 прошлые
+                            if (candleData[0].GetInt64() > _lastCandleTime) 
+                            {
+                                _lastCandleTime = candleData[0].GetInt64();
+                                Candle newCandle = new Candle
+                                {
+                                    Pair = pair,
+                                    OpenTime = DateTimeOffset.FromUnixTimeMilliseconds(_lastCandleTime),
+                                    OpenPrice = candleData[1].GetDecimal(),
+                                    LowPrice = candleData[2].GetDecimal(),
+                                    HighPrice = candleData[3].GetDecimal(),
+                                    ClosePrice = candleData[4].GetDecimal(),
+                                    TotalVolume = candleData[5].GetDecimal(),
+                                };
+
+                                Debug.WriteLine($"{newCandle.Pair} {newCandle.OpenTime} {newCandle.OpenPrice} {newCandle.LowPrice} {newCandle.HighPrice} {newCandle.ClosePrice} {newCandle.TotalVolume} {newCandle.TotalPrice}");
+                            }
+                        }
+                    }
+                }
+            });
+
+            _client.Start();
+
+            string subscribeMessage = $"{{\"event\": \"subscribe\", \"channel\": \"candles\", \"key\": \"trade:{GetTimeFrameByMin(periodInMin)}:t{pair}\"}}";
+            _client.Send(subscribeMessage);
         }
 
         public void SubscribeTrades(string pair, int maxCount = 100)
         {
-            throw new NotImplementedException();
+            string wsUrl = "wss://api-pub.bitfinex.com/ws/2";
+            _client = new WebsocketClient(new Uri(wsUrl));
+
+            _client.MessageReceived.Subscribe(msg =>
+            {
+                Debug.WriteLine(msg.Text);
+                var jsonDoc = JsonDocument.Parse(msg.Text);
+                var root = jsonDoc.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array) //Проверка на то что прислан массив с данными трейдов, а не ответ от сервера о подписке
+                {
+                    if (root.GetArrayLength() == 3) //Проверка на то что это именно массив с данными трейда а не hb, потому что если hb, то в списке только id канала и пометка hb
+                    {
+                        var tradeInfo = root[2];
+                        Trade newTrade = new Trade
+                        {
+                            Id = tradeInfo[0].ToString(),
+                            Pair = pair,
+                            Time = DateTimeOffset.FromUnixTimeMilliseconds(tradeInfo[1].GetInt64()),
+                            Amount = tradeInfo[2].GetDecimal(),
+                            Price = tradeInfo[3].GetDecimal(),
+                            Side = tradeInfo[2].GetDecimal() > 0 ? "buy" : "sell",
+                        };
+
+                        Debug.WriteLine($"{newTrade.Id} {newTrade.Pair} {newTrade.Time} {newTrade.Amount} {newTrade.Price} {newTrade.Side}");
+                    }
+                }
+            });
+
+            _client.Start();
+
+            string subscribeMessage = $"{{\"event\": \"subscribe\", \"channel\": \"trades\", \"symbol\": \"t{pair}\"}}";
+            _client.Send(subscribeMessage);
         }
 
         public void UnsubscribeCandles(string pair)
@@ -132,5 +199,28 @@ namespace TestTask.BLL.Services
         {
             throw new NotImplementedException();
         }
+
+
+
+
+
+        //Метод для конвертрования длительности свечи с минут на значения, которые валидны для API
+        private string GetTimeFrameByMin(int periodInMin)
+        {
+            return periodInMin switch
+            {
+                1 => "1m",
+                5 => "5m",
+                15 => "15m",
+                30 => "30m",
+                60 => "1h",
+                240 => "4h",
+                1440 => "1D",
+                10080 => "7D",
+                20160 => "14D",
+                43200 => "1M",
+            };
+        }
+
     }
 }

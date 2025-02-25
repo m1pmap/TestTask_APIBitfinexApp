@@ -13,6 +13,8 @@ namespace TestTask.BLL.Interfaces
         #region Rest
 
         Task<IEnumerable<Trade>> GetNewTradesAsync(string pair, int maxCount);
+
+        //Изменил имя входного параметра для указания длительности свечи с periodInSec на periodOnMin, так как минимальное принимаемое значение API bitfinex - 1m
         Task<IEnumerable<Candle>> GetCandleSeriesAsync(string pair, int periodInMin, DateTimeOffset? from, DateTimeOffset? to = null, long? count = 100);
 
         #endregion
@@ -26,7 +28,12 @@ namespace TestTask.BLL.Interfaces
         void UnsubscribeTrades(string pair);
 
         event Action<Candle> CandleSeriesProcessing;
-        void SubscribeCandles(string pair, int periodInSec, DateTimeOffset? from = null, DateTimeOffset? to = null, long? count = 0);
+
+        //Удалил следующие входные параметры:
+        //from - потому что API bitfinex не принимает начала временного интервала, так как возвращает новое, только что появившееся, значение свечи 
+        //to - потому что API bitfinex не принимает конец временного интервала и возвращает только новое значение свечи
+        //Изменил имя входного параметра для указания длительности свечи с periodInSec на periodOnMin, так как минимальное принимаемое значение API bitfinex - 1m
+        void SubscribeCandles(string pair, int periodInMin, long? count = 0);
         void UnsubscribeCandles(string pair);
 
         #endregion

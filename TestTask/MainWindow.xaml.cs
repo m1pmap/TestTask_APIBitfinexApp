@@ -28,6 +28,13 @@ public partial class MainWindow : Window
 
         //_testConnectorService.GetNewTradesAsync("BTCUSD", 12);
 
-        _testConnectorService.GetCandleSeriesAsync("ETHUSD", 15, DateTimeOffset.UtcNow.AddHours(-1).AddHours(-1), count:  5);
+
+        //_testConnectorService.GetCandleSeriesAsync("ETHUSD", 15, DateTimeOffset.UtcNow.AddHours(-1).AddHours(-1), count:  5);
+
+        //_testConnectorService.SubscribeTrades("BTCUSD");
+
+        _testConnectorService.SubscribeCandles("BTCUSD", 1);
+
+
     }
 }
