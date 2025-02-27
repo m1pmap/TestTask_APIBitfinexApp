@@ -16,7 +16,7 @@ namespace TestTask.BLL.Services
 {
     public class TaskConnector_Service : ITestConnector
     {
-        private WebsocketClient _client = new WebsocketClient(new Uri("wss://api-pub.bitfinex.com/ws/2"));
+        private WebsocketClient _client;
         public event Action<Trade> NewBuyTrade;
         public event Action<Trade> NewSellTrade;
         public event Action<Candle> CandleSeriesProcessing;
@@ -106,115 +106,35 @@ namespace TestTask.BLL.Services
 
         public void SubscribeCandles(string pair, int periodInMin, long? count = 0)
         {
-            //string wsUrl = "wss://api-pub.bitfinex.com/ws/2";
-            //_client = new WebsocketClient(new Uri(wsUrl));
+            InitializeWebSocket();
 
-            _client.MessageReceived.Subscribe(msg =>
+            if (!CandleActiveChannels.Any(pc => pc.Pair == pair))
             {
-                Debug.WriteLine(msg.Text); //Вывод сообщения для регулировки происходящего
-                var jsonDoc = JsonDocument.Parse(msg.Text);
-                var root = jsonDoc.RootElement;
-
-
-                if (root.ValueKind == JsonValueKind.Array) //Проверка на то что прислан массив с данными трейдов, а не ответ от сервера о подписке
-                {
-                    if (!CandleActiveChannels.Any(pc => pc.ChanId == root[0].GetDecimal()))
-                    {
-                        CandleActiveChannels.Add(new PairChanID { Pair = pair, ChanId = root[0].GetDecimal() });
-                    }
-
-                    if (root[1].ValueKind == JsonValueKind.Array) //Проверка на наличие данных о новой свече, а не hb
-                    {
-                        var candleData = root[1];
-                        //Проверка на то что это именно массив с новой свечой, а не с историей прошлых свечей за недавнее время
-                        if(candleData.GetArrayLength() == 6)
-                        {
-                            Candle newCandle = new Candle
-                            {
-                                Pair = pair,
-                                OpenTime = DateTimeOffset.FromUnixTimeMilliseconds(candleData[0].GetInt64()),
-                                OpenPrice = candleData[1].GetDecimal(),
-                                LowPrice = candleData[2].GetDecimal(),
-                                HighPrice = candleData[3].GetDecimal(),
-                                ClosePrice = candleData[4].GetDecimal(),
-                                TotalVolume = candleData[5].GetDecimal(),
-                            };
-
-                            //Вычисление объёма
-                            newCandle.TotalPrice = newCandle.ClosePrice * newCandle.TotalVolume;
-
-                            CandleSeriesProcessing?.Invoke(newCandle);
-                        }
-                    }
-                }
-            });
-
-            _client.Start();
-
-            string subscribeMessage = $"{{\"event\": \"subscribe\", \"channel\": \"candles\", \"key\": \"trade:{GetTimeFrameByMin(periodInMin)}:t{pair}\"}}";
-            _client.Send(subscribeMessage);
+                string subscribeMessage = $"{{\"event\": \"subscribe\", \"channel\": \"candles\", \"key\": \"trade:{GetTimeFrameByMin(periodInMin)}:t{pair}\"}}";
+                _client.Send(subscribeMessage);
+            }
         }
 
         public void SubscribeTrades(string pair, int maxCount = 100)
         {
-            //string wsUrl = "wss://api-pub.bitfinex.com/ws/2";
-            //_client = new WebsocketClient(new Uri(wsUrl));
+            InitializeWebSocket();
 
-            _client.MessageReceived.Subscribe(msg =>
+            if (!TradeActiveChannels.Any(pc => pc.Pair == pair))
             {
-                Debug.WriteLine(msg.Text);
-                var jsonDoc = JsonDocument.Parse(msg.Text);
-                var root = jsonDoc.RootElement;
-
-                if (root.ValueKind == JsonValueKind.Array) //Проверка на то что прислан массив с данными трейдов, а не ответ от сервера о подписке
-                {
-                    if (!TradeActiveChannels.Any(pc => pc.ChanId == root[0].GetDecimal()))
-                    {
-                        TradeActiveChannels.Add(new PairChanID { Pair = pair, ChanId = root[0].GetDecimal() });
-                    }
-
-                    if (root.GetArrayLength() == 3) //Проверка на то что это именно массив с данными трейда а не hb, потому что если hb, то в списке только id канала и пометка hb
-                    {
-                        var tradeInfo = root[2];
-                        Trade newTrade = new Trade
-                        {
-                            Id = tradeInfo[0].ToString(),
-                            Pair = pair,
-                            Time = DateTimeOffset.FromUnixTimeMilliseconds(tradeInfo[1].GetInt64()),
-                            Amount = tradeInfo[2].GetDecimal(),
-                            Price = tradeInfo[3].GetDecimal(),
-                            Side = tradeInfo[2].GetDecimal() > 0 ? "buy" : "sell",
-                        };
-
-                        if (newTrade.Side == "buy")
-                            NewBuyTrade?.Invoke(newTrade);
-                        else
-                            NewSellTrade?.Invoke(newTrade);
-
-                        Debug.WriteLine($"{newTrade.Id} {newTrade.Pair} {newTrade.Time} {newTrade.Amount} {newTrade.Price} {newTrade.Side}");
-                    }
-                }
-            });
-
-            _client.Start();
-
-            string subscribeMessage = $"{{\"event\": \"subscribe\", \"channel\": \"trades\", \"symbol\": \"t{pair}\"}}";
-            _client.Send(subscribeMessage);
+                string subscribeMessage = $"{{\"event\": \"subscribe\", \"channel\": \"trades\", \"symbol\": \"t{pair}\"}}";
+                _client.Send(subscribeMessage);
+            }
         }
 
         public void UnsubscribeCandles(string pair)
         {
-            if (_client.IsRunning)
+            PairChanID selectedPairChanId = CandleActiveChannels.FirstOrDefault(pc => pc.Pair == pair);
+            if (selectedPairChanId != null)
             {
-                PairChanID selectedPairChanId = CandleActiveChannels.FirstOrDefault(pc => pc.Pair == pair);
-                if(selectedPairChanId != null)
-                {
-                    Debug.WriteLine(selectedPairChanId.ChanId);
-                    string unsubscribeMessage = $"{{\"event\": \"unsubscribe\", \"chanId\": \"{selectedPairChanId.ChanId}\"}}";
-                    _client.Send(unsubscribeMessage);
+                string unsubscribeMessage = $"{{\"event\": \"unsubscribe\", \"chanId\": \"{selectedPairChanId.ChanId}\"}}";
+                _client.Send(unsubscribeMessage);
 
-                    //CandleActiveChannels.Remove(selectedPairChanId);
-                }
+                CandleActiveChannels.Remove(selectedPairChanId);
             }
         }
 
@@ -223,14 +143,109 @@ namespace TestTask.BLL.Services
             PairChanID selectedPairChanId = TradeActiveChannels.FirstOrDefault(pc => pc.Pair == pair);
             if (selectedPairChanId != null)
             {
-                Debug.WriteLine(selectedPairChanId.ChanId);
                 string unsubscribeMessage = $"{{\"event\": \"unsubscribe\", \"chanId\": \"{selectedPairChanId.ChanId}\"}}";
                 _client.Send(unsubscribeMessage);
 
                 TradeActiveChannels.Remove(selectedPairChanId);
-                //Debug.WriteLine(TradeActiveChannels.Count.ToString());
             }
-            Debug.WriteLine("1111");
+        }
+
+
+
+
+
+        //Метод для инициализации сокета, если он не был создан до этого. 
+        //Он указывает то, как необходимо обрабатывать сообщение от API Bitfinex
+        //в случаях свечей или трейдов
+        private void InitializeWebSocket()
+        {
+            if (_client == null)
+            {
+                string wsUrl = "wss://api-pub.bitfinex.com/ws/2";
+                _client = new WebsocketClient(new Uri(wsUrl));
+
+                _client.MessageReceived.Subscribe(msg =>
+                {
+                    Debug.WriteLine(msg.Text);
+                    var jsonDoc = JsonDocument.Parse(msg.Text);
+                    var root = jsonDoc.RootElement;
+
+                    if (root.ValueKind == JsonValueKind.Array) //Проверка на то, что прислан массив с данными трейдов, а не ответ от сервера о подписке
+                    {
+                        decimal chanId = root[0].GetDecimal();
+
+                        //Проверка к какому типу канала относится ответ(Трейд или Свеча) Если найдено - относится
+                        PairChanID tradeChannel = TradeActiveChannels.FirstOrDefault(pc => pc.ChanId == chanId);
+                        PairChanID candleChannel = CandleActiveChannels.FirstOrDefault(pc => pc.ChanId == chanId);
+
+                        if (tradeChannel != null)
+                        {
+                            if (root.GetArrayLength() == 3) //Проверка на то что это именно массив с данными трейда а не hb, потому что если hb, то в списке только id канала и пометка hb
+                            {
+                                var tradeInfo = root[2];
+                                Trade newTrade = new Trade
+                                {
+                                    Id = tradeInfo[0].ToString(),
+                                    Pair = tradeChannel.Pair,
+                                    Time = DateTimeOffset.FromUnixTimeMilliseconds(tradeInfo[1].GetInt64()),
+                                    Amount = tradeInfo[2].GetDecimal(),
+                                    Price = tradeInfo[3].GetDecimal(),
+                                    Side = tradeInfo[2].GetDecimal() > 0 ? "buy" : "sell",
+                                };
+
+                                if (newTrade.Side == "buy")
+                                    NewBuyTrade?.Invoke(newTrade);
+                                else
+                                    NewSellTrade?.Invoke(newTrade);
+                            }
+                        }
+                        else if (candleChannel != null)
+                        {
+                            if (root[1].ValueKind == JsonValueKind.Array) //Проверка на наличие данных о новой свече, а не hb
+                            {
+                                var candleData = root[1];
+
+                                //Проверка на то что это именно массив с новой свечой, а не с историей прошлых свечей за недавнее время
+                                if (candleData.GetArrayLength() == 6)
+                                {
+                                    Candle newCandle = new Candle
+                                    {
+                                        Pair = candleChannel.Pair,
+                                        OpenTime = DateTimeOffset.FromUnixTimeMilliseconds(candleData[0].GetInt64()),
+                                        OpenPrice = candleData[1].GetDecimal(),
+                                        LowPrice = candleData[2].GetDecimal(),
+                                        HighPrice = candleData[3].GetDecimal(),
+                                        ClosePrice = candleData[4].GetDecimal(),
+                                        TotalVolume = candleData[5].GetDecimal(),
+                                    };
+
+                                    newCandle.TotalPrice = newCandle.ClosePrice * newCandle.TotalVolume;
+                                    CandleSeriesProcessing?.Invoke(newCandle);
+                                }
+                            }
+                        }
+                    }
+                    else if (root.TryGetProperty("event", out JsonElement eventElement) && eventElement.GetString() == "subscribed") //Обработка ответа о подписке
+                    {
+                        //Добавление нового активного канала трейда или свечи
+                        string channel = root.GetProperty("channel").GetString();
+                        decimal chanId = root.GetProperty("chanId").GetDecimal();
+
+                        if (channel == "trades") //Трейд
+                        {
+                            string pair = root.GetProperty("symbol").GetString().TrimStart('t'); //Извлечение из ответа только валютной пары
+                            TradeActiveChannels.Add(new PairChanID { Pair = pair, ChanId = chanId });
+                        }
+                        else if (channel == "candles") //Свеча
+                        {
+                            string pair = root.GetProperty("key").GetString().Split(':')[2].TrimStart('t'); //Извлечение из ответа только валютной пары
+                            CandleActiveChannels.Add(new PairChanID { Pair = pair, ChanId = chanId });
+                        }
+                    }
+                });
+
+                _client.Start();
+            }
         }
 
         //Метод для конвертрования длительности свечи с минут на значения, которые валидны для API

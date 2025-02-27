@@ -160,7 +160,7 @@
                     <StackPanel Orientation="Vertical">
                         <StackPanel Orientation="Horizontal" Margin="5">
                             <Label Content="Торговая пара:" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
-                            <TextBox x:Name="pair_data_textBox" FontFamily="Arial Black" FontSize="15" Width="108" Height="20" Foreground="Gray"/>
+                            <TextBox x:Name="pair_data_textBox" FontFamily="Arial Black" FontSize="15" Width="108" Height="20" Foreground="Gray" Text=""/>
 
                             <Label Content="Количество:" Margin="5,0,0,0" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
                             <TextBox x:Name="count_data_textBox" FontFamily="Arial Black" FontSize="15" Height="20" Width="108" Foreground="Gray"/>
@@ -212,11 +212,6 @@
                 <Border Background="White" CornerRadius="15" >
                     <StackPanel Orientation="Vertical">
                         <StackPanel Orientation="Horizontal" Margin="5">
-                            <Label Content="Торговая пара:" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
-                            <TextBox x:Name="pair_subscribe_textBox" FontFamily="Arial Black" FontSize="15" Width="108" Height="20" Foreground="Gray"/>
-
-                            <Label Content="Интервал свечи(мин.):" Margin="5,0,0,0" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
-                            <TextBox x:Name="candleInterval_subscribe_textBox" FontFamily="Arial Black" FontSize="15" Height="20" Width="92" Foreground="Gray"/>
 
                             <Button x:Name="subscribeTrades_button"
                                     Template="{StaticResource btTemplate}" 
@@ -224,7 +219,7 @@
                                     Height="27" Width="194"
                                     Background="MediumSeaGreen"
                                     VerticalAlignment="Center"
-                                    Margin="6,0,0,0"
+                                    Margin="5,0,0,0"
                                     Click="subscribeTrades_button_Click"
                                     Content="Подписаться на Трейды"/>
 
@@ -237,6 +232,13 @@
                                     Margin="6,0,0,0"
                                     Click="unsubscribeTrades_button_Click"
                                     Content="Отписаться от Трейдов"/>
+
+
+                            <Label Content="Торговая пара:" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
+                            <TextBox x:Name="pair_subscribe_textBox" FontFamily="Arial Black" FontSize="15" Width="108" Height="20" Foreground="Gray"/>
+
+                            <Label Content="Интервал свечи(мин.):" Margin="5,0,0,0" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
+                            <TextBox x:Name="candleInterval_subscribe_textBox" FontFamily="Arial Black" FontSize="15" Height="20" Width="92" Foreground="Gray"/>
 
                             <Button x:Name="subscribeCandles_button"
                                     Template="{StaticResource btTemplate}" 
@@ -261,7 +263,7 @@
 
                         <StackPanel Orientation="Horizontal">
                             <DataGrid x:Name="trades_dataGrid" Height="325" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
-                                      Background="Transparent" RowHeaderWidth="0" Width="625">
+                                      Background="Transparent" RowHeaderWidth="0" Width="480">
                                 <DataGrid.RowStyle>
                                     <Style TargetType="DataGridRow">
                                         <Setter Property="Foreground" Value="White" />
@@ -283,12 +285,82 @@
                             </DataGrid>
 
                             <DataGrid x:Name="candles_dataGrid" Height="325" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
-                                      Background="Transparent" RowHeaderWidth="0" Width="625"/>
+                                      Background="Transparent" RowHeaderWidth="0" Width="773"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
             </TabItem>
-            <TabItem Header="Баланс"></TabItem>
+            <TabItem Header="Баланс">
+                <Border Background="White" CornerRadius="15">
+                    <StackPanel>
+                        <Label Content="Текущий баланс: 1 BTC, 15000 XPR, 50 XMR, 30 DASH" Foreground="Gray" FontFamily="Arial Black" FontSize="15" HorizontalAlignment="Right" Margin="7"/>
+
+                        <StackPanel Orientation="Horizontal" Margin="5">
+
+                            <Label Content="Отобразить баланс в:" FontFamily="Arial" Foreground="Gray" FontSize="15" VerticalAlignment="Center"/>
+
+                            <Button x:Name="USDT_button"
+                                     Template="{StaticResource btTemplate}" 
+                                     Foreground="White"
+                                     Height="27" Width="60"
+                                     Background="MediumSeaGreen"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,0,0"
+                                     Content="USDT"
+                                    Click="Currency_button_Click"/>
+
+                            <Button x:Name="BTC_button"
+                                     Template="{StaticResource btTemplate}" 
+                                     Foreground="White"
+                                     Height="27" Width="60"
+                                     Background="Coral"
+                                     VerticalAlignment="Center"
+                                     Margin="5,0,0,0"
+                                     Content="BTC"
+                                    Click="Currency_button_Click"/>
+
+                            <Button x:Name="XRP_button"
+                                     Template="{StaticResource btTemplate}" 
+                                     Foreground="White"
+                                     Height="27" Width="60"
+                                     Background="CornflowerBlue"
+                                     VerticalAlignment="Center"
+                                     Margin="5,0,0,0"
+                                     Content="XRP"
+                                    Click="Currency_button_Click"/>
+
+                            <Button x:Name="XMR_button"
+                                     Template="{StaticResource btTemplate}" 
+                                     Foreground="White"
+                                     Height="27" Width="60"
+                                     Background="DarkOrange"
+                                     VerticalAlignment="Center"
+                                     Margin="5,0,0,0"
+                                     Content="XMR"
+                                    Click="Currency_button_Click"/>
+
+                            <Button x:Name="DASH_button"
+                                     Template="{StaticResource btTemplate}" 
+                                     Foreground="White"
+                                     Height="27" Width="60"
+                                     Background="DodgerBlue"
+                                     VerticalAlignment="Center"
+                                     Margin="5,0,0,0"
+                                     Content="DASH"
+                                    Click="Currency_button_Click"/>
+                        </StackPanel>
+
+                        <DataGrid x:Name="balance_dataGrid" Height="294" Margin="10" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
+                                  Background="Transparent" RowHeaderWidth="0" AutoGenerateColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Валюта" Width="1*" Binding="{Binding CurrencyName}"/>
+                                <DataGridTextColumn Header="Количество" Width="10*" Binding="{Binding Count}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                    </StackPanel>
+                </Border>
+            </TabItem>
         </TabControl>
     </Grid>
 </Window>
