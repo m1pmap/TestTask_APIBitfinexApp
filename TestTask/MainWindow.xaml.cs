@@ -32,22 +32,25 @@ public partial class MainWindow : Window
 
     private ObservableCollection<BalanceCurrency_MV> BalanceCurrencies { get; set; } = new();
 
-    private List<string> ValidPairs = new List<string> { "BTCUST", "XRPBTC", "XMRBTC", "DSHBTC", "XRPUST", "XMRUST", "DSHUSD" };
+    private List<string> ValidPairs = new List<string> { "BTCUST", "BTCUSD", "XRPBTC", "XRPUSD", "XMRBTC", "XMRUSD", "DSHUSD", "DSHBTC", "XRPUST", "XMRUST", "DSHUSD" };
 
     public MainWindow(ITestConnector testConnectorService)
     {
         InitializeComponent();
         _testConnectorService = testConnectorService;
 
+        //Указание какие методы будут выполняться при активации ивента
         _testConnectorService.NewBuyTrade += OnNewTradeReceived;
         _testConnectorService.NewSellTrade += OnNewTradeReceived;
         _testConnectorService.CandleSeriesProcessing += OnNewCandleProcessingReceived;
 
+        //Привязка данных к DataGrid
         trades_dataGrid.ItemsSource = SubscribedTrades;
         candles_dataGrid.ItemsSource = SubscribedCandles;
         balance_dataGrid.ItemsSource = BalanceCurrencies;
     }
 
+    //Методы, срабатываемые при получении нового трейда или свечи
     private void OnNewTradeReceived(Trade trade)
     {
         App.Current.Dispatcher.Invoke(() => SubscribedTrades.Insert(0, trade));
@@ -58,49 +61,72 @@ public partial class MainWindow : Window
         App.Current.Dispatcher.Invoke(() => SubscribedCandles.Insert(0, candle));
     }
 
+    //Получение и загрузка трейдов
     public async Task LoadTradesAsync()
     {
-        string pair = pair_data_textBox.Text;
-        int count = Convert.ToInt32(count_data_textBox.Text);
-        var trades = await _testConnectorService.GetNewTradesAsync(pair, count);
-        Trades.Clear();
-        foreach (var trade in trades)
+        if(!string.IsNullOrWhiteSpace(pair_data_textBox.Text) ||
+            !string.IsNullOrWhiteSpace(count_data_textBox.Text))
         {
-            Trades.Add(trade);
-        }
-        tradeCandle_dataGrid.ItemsSource = Trades;
+            string pair = pair_data_textBox.Text;
+            int count = Convert.ToInt32(count_data_textBox.Text);
+            var trades = await _testConnectorService.GetNewTradesAsync(pair, count);
+            Trades.Clear();
+            foreach (var trade in trades)
+            {
+                Trades.Add(trade);
+            }
+            tradeCandle_dataGrid.ItemsSource = Trades;
 
-        foreach (var column in tradeCandle_dataGrid.Columns)
+            foreach (var column in tradeCandle_dataGrid.Columns)
+            {
+                column.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+            }
+        }
+        else
         {
-            column.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+            MessageBox.Show("Указаны не все параметры", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
+    //Получение и загрузка свечей
     public async Task LoadCandlesAsync()
     {
-        string pair = pair_data_textBox.Text;
-        int count = Convert.ToInt32(count_data_textBox.Text);
-
-        int hours = Convert.ToInt32(HH_textBox.Text);
-        int minutes = Convert.ToInt32(mm_textBox.Text);
-        int seconds = Convert.ToInt32(ss_textBox.Text);
-        DateTime timeFrom = new DateTime(DateTime.Today.Year, DateTime.Today.Month, DateTime.Today.Day, hours, minutes, seconds, DateTimeKind.Local);
-
-        int interval = Convert.ToInt32(candleInterval_data_textBox.Text);
-
-        var candles = await _testConnectorService.GetCandleSeriesAsync(pair, interval, timeFrom, count: count);
-        Candles.Clear();
-        foreach (var candle in candles)
+        if (!string.IsNullOrWhiteSpace(pair_data_textBox.Text) ||
+            !string.IsNullOrWhiteSpace(count_data_textBox.Text) ||
+            !string.IsNullOrWhiteSpace(HH_textBox.Text) ||
+            !string.IsNullOrWhiteSpace(mm_textBox.Text) ||
+            !string.IsNullOrWhiteSpace(ss_textBox.Text) ||
+            !string.IsNullOrWhiteSpace(candleInterval_data_textBox.Text))
         {
-            Candles.Add(candle);
+            string pair = pair_data_textBox.Text;
+            int count = Convert.ToInt32(count_data_textBox.Text);
+
+            int hours = Convert.ToInt32(HH_textBox.Text);
+            int minutes = Convert.ToInt32(mm_textBox.Text);
+            int seconds = Convert.ToInt32(ss_textBox.Text);
+            DateTimeOffset timeFrom = DateTimeOffset.UtcNow.AddDays(-1).AddHours(hours).AddMinutes(minutes).AddSeconds(seconds);
+
+            int interval = Convert.ToInt32(candleInterval_data_textBox.Text);
+
+            var candles = await _testConnectorService.GetCandleSeriesAsync(pair, interval, timeFrom, count: count);
+            Candles.Clear();
+            foreach (var candle in candles)
+            {
+                Candles.Add(candle);
+            }
+            tradeCandle_dataGrid.ItemsSource = Candles;
+
+            foreach (var column in tradeCandle_dataGrid.Columns)
+            {
+                column.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+            }
         }
-        tradeCandle_dataGrid.ItemsSource = Candles;
-
-        foreach (var column in tradeCandle_dataGrid.Columns)
+        else
         {
-            column.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+            MessageBox.Show("Указаны не все параметры", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
 
     private void gedTrades_button_Click(object sender, RoutedEventArgs e)
     {
@@ -112,17 +138,33 @@ public partial class MainWindow : Window
         LoadCandlesAsync();
     }
 
+    //Подписка на свечи и трейды
     private void subscribeTrades_button_Click(object sender, RoutedEventArgs e)
     {
-        _testConnectorService.SubscribeTrades(pair_subscribe_textBox.Text);
+        if (!string.IsNullOrWhiteSpace(pair_subscribe_textBox.Text))
+        {
+            _testConnectorService.SubscribeTrades(pair_subscribe_textBox.Text);
+        }
+        else
+        {
+            MessageBox.Show("Указаны не все параметры", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void subscribeCandles_button_Click(object sender, RoutedEventArgs e)
     {
-        int interval = Convert.ToInt32(candleInterval_subscribe_textBox.Text);
-        _testConnectorService.SubscribeCandles(pair_subscribe_textBox.Text, interval);
+        if (!string.IsNullOrWhiteSpace(pair_subscribe_textBox.Text) || !string.IsNullOrWhiteSpace(candleInterval_subscribe_textBox.Text))
+        {
+            int interval = Convert.ToInt32(candleInterval_subscribe_textBox.Text);
+            _testConnectorService.SubscribeCandles(pair_subscribe_textBox.Text, interval);
+        }
+        else
+        {
+            MessageBox.Show("Указаны не все параметры", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
+    //Отписка
     private void unsubscribeTrades_button_Click(object sender, RoutedEventArgs e)
     {
         _testConnectorService.UnsubscribeTrades(pair_subscribe_textBox.Text);
@@ -136,95 +178,74 @@ public partial class MainWindow : Window
     private void Currency_button_Click(object sender, RoutedEventArgs e)
     {
         BalanceCurrencies.Clear();
-
         Button currentButton = (Button)sender;
-
         string currentCurrency = currentButton.Content.ToString();
+
+        balance_dataGrid.Columns[1].Header = $"Количество в {currentCurrency}";
+
         ConvertUserBalanceAsync(currentCurrency);
     }
 
-    public async Task ConvertUserBalanceAsync(string currency)
+    //Конвертация всего баланса кошелька
+    public async void ConvertUserBalanceAsync(string currency)
     {
+        //Преобразование тикеров под те, что принимаются API
         if(currency == "USDT") { currency = "UST"; }
         else if (currency == "DASH") { currency = "DSH"; }
 
-        if (currency != "BTC")
+        await ConvertCurrency("BTC", currency, 1);
+        await ConvertCurrency("XRP", currency, 15000);
+        await ConvertCurrency("XMR", currency, 50);
+
+        if (currency == "UST") { currency = "USD"; } //Некорректно, но биржа bitfinex не имеет пару DSHUSDt (Можно убрать)
+
+        await ConvertCurrency("DSH", currency, 30);
+
+        //Высчитывания полной стоимости кошелька
+        decimal sumCurrencies = BalanceCurrencies.Sum(bc => bc.Count);
+        BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "ИТОГО:", Count = sumCurrencies });
+    }
+
+    //Конвертация валюты
+    private async Task ConvertCurrency(string from, string to, int count)
+    {
+        if (from != to) //Если конвертируется не сама в себя
         {
-            if (ValidPairs.Contains($"BTC{currency}"))
+            if (ValidPairs.Contains(from + to)) //Проверка среди валидных пар
             {
-                Trade BTCCurrency = (await _testConnectorService.GetNewTradesAsync($"BTC{currency}", 1)).FirstOrDefault();
-                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "BTC", Count = 1 * BTCCurrency.Price });
+                Trade fromToPair = (await _testConnectorService.GetNewTradesAsync(from + to, 1)).FirstOrDefault();
+                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = Math.Round(count * fromToPair.Price, 4) });
             }
-            else
+            else //Если пара не валидна, то валюты меняются местами
             {
-                if (ValidPairs.Contains($"{currency}BTC"))
+                if (ValidPairs.Contains(to + from))
                 {
-                    Trade CurrencyBTC = (await _testConnectorService.GetNewTradesAsync($"{currency}BTC", 1)).FirstOrDefault();
-                    BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "BTC", Count = 1 / CurrencyBTC.Price });
+                    Trade toFromPair = (await _testConnectorService.GetNewTradesAsync(to + from, 1)).FirstOrDefault();
+                    BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = Math.Round(count / toFromPair.Price, 4) });
                 }
-                else
+                else //Если и перестановка не помогла, то конвертируется в USD и с USD в необходимую валюту
                 {
-                    BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "BTC", Count = 0 });
+                    if (ValidPairs.Contains(from + "USD"))
+                    {
+                        Trade fromUSDPair = (await _testConnectorService.GetNewTradesAsync(from + "USD", 1)).FirstOrDefault();
+                        decimal countInUSD = count * fromUSDPair.Price;
+
+                        if (ValidPairs.Contains(to + "USD"))
+                        {
+                            Trade toUSDPair = (await _testConnectorService.GetNewTradesAsync(to + "USD", 1)).FirstOrDefault();
+                            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = Math.Round(countInUSD / toUSDPair.Price, 4) });
+                        }
+                        else //Если и это не помогло, то значит такой пары нет на Bitfinex
+                        {
+                            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = 0 });
+                        }
+                    }
                 }
             }
         }
-        else
+        else //Если происходит конвертация сама в себя, то возвращается количество
         {
-            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "BTC", Count = 1 });
-        }
-
-        if (currency != "XRP")
-        {
-            if (ValidPairs.Contains($"XRP{currency}"))
-            {
-                Trade XRPCurrency = (await _testConnectorService.GetNewTradesAsync($"XRP{currency}", 1)).FirstOrDefault();
-                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "XRP", Count = 15000 * XRPCurrency.Price });
-            }
-            else
-            {
-                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "XRP", Count = 0 });
-            }
-        }
-        else
-        {
-            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "XRP", Count = 15000 });
-        }
-
-        if (currency != "XMR")
-        {
-            if (ValidPairs.Contains($"XMR{currency}"))
-            {
-                Trade XMRCurrency = (await _testConnectorService.GetNewTradesAsync($"XMR{currency}", 1)).FirstOrDefault();
-                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "XMR", Count = 50 * XMRCurrency.Price });
-            }
-            else
-            {
-                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "XMR", Count = 0 });
-            }
-        }
-        else
-        {
-            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "XMR", Count = 50 });
-        }
-
-
-        if (currency == "UST") { currency = "USD"; }
-        
-        if (currency != "DSH")
-        {
-            if (ValidPairs.Contains($"DSH{currency}"))
-            {
-                Trade DASHCurrency = (await _testConnectorService.GetNewTradesAsync($"DSH{currency}", 1)).FirstOrDefault();
-                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "DSH", Count = 30 * DASHCurrency.Price });
-            }
-            else
-            {
-                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "DSH", Count = 0 });
-            }
-        }
-        else
-        {
-            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "DSH", Count = 30 });
+            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = count });
         }
     }
 }

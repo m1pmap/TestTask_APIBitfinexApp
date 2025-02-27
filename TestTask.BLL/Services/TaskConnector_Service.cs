@@ -248,6 +248,7 @@ namespace TestTask.BLL.Services
             }
         }
 
+
         //Метод для конвертрования длительности свечи с минут на значения, которые валидны для API
         private string GetTimeFrameByMin(int periodInMin)
         {

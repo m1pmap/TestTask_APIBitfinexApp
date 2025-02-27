@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TestTask"
         mc:Ignorable="d"
-        Title="MainWindow" Height="470" Width="1330" WindowStartupLocation="CenterScreen">
+        Title="MainWindow" Height="495" Width="1330" WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
         <!--Стиль для кнопки с закруглёнными краями-->
@@ -152,7 +152,7 @@
         </Style>
 
     </Window.Resources>
-    
+
     <Grid Background="Gray">
         <TabControl Background="Gray" BorderThickness="0" Margin="10">
             <TabItem Header="Торговые данные">
@@ -200,11 +200,11 @@
                             </Button>
                         </StackPanel>
 
-                        <DataGrid x:Name="tradeCandle_dataGrid" Height="325" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
+                        <DataGrid x:Name="tradeCandle_dataGrid" Height="345" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
                                   Background="Transparent" RowHeaderWidth="0">
-                            
+
                         </DataGrid>
-                        
+
                     </StackPanel>
                 </Border>
             </TabItem>
@@ -262,7 +262,7 @@
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
-                            <DataGrid x:Name="trades_dataGrid" Height="325" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
+                            <DataGrid x:Name="trades_dataGrid" Height="345" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
                                       Background="Transparent" RowHeaderWidth="0" Width="480">
                                 <DataGrid.RowStyle>
                                     <Style TargetType="DataGridRow">
@@ -284,7 +284,7 @@
                                 </DataGrid.RowStyle>
                             </DataGrid>
 
-                            <DataGrid x:Name="candles_dataGrid" Height="325" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
+                            <DataGrid x:Name="candles_dataGrid" Height="345" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
                                       Background="Transparent" RowHeaderWidth="0" Width="773"/>
                         </StackPanel>
                     </StackPanel>
@@ -293,7 +293,7 @@
             <TabItem Header="Баланс">
                 <Border Background="White" CornerRadius="15">
                     <StackPanel>
-                        <Label Content="Текущий баланс: 1 BTC, 15000 XPR, 50 XMR, 30 DASH" Foreground="Gray" FontFamily="Arial Black" FontSize="15" HorizontalAlignment="Right" Margin="7"/>
+                        <Label Content="Текущий баланс: 1 BTC, 15000 XRP, 50 XMR, 30 DASH" Foreground="Gray" FontFamily="Arial Black" FontSize="15" HorizontalAlignment="Right" Margin="7"/>
 
                         <StackPanel Orientation="Horizontal" Margin="5">
 
