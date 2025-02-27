@@ -5,8 +5,290 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TestTask"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="MainWindow" Height="470" Width="1330" WindowStartupLocation="CenterScreen">
 
+    <Window.Resources>
+        <!--Стиль для кнопки с закруглёнными краями-->
+        <ControlTemplate TargetType="Button" x:Key="btTemplate">
+            <Border x:Name="border"
+                CornerRadius="10" 
+                Background="{TemplateBinding Background}">
+                <Grid 
+                    HorizontalAlignment="Center" 
+                    VerticalAlignment="Center">
+                    <ContentPresenter HorizontalAlignment="Center" 
+                      VerticalAlignment="Center" 
+                      Content="{TemplateBinding Content}" 
+                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="border" Property="Background" Value="LightBlue"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!--Стиль для dataGrid-->
+        <Style TargetType="DataGrid">
+            <Setter Property="BorderBrush" Value="#DDDDDD" />
+            <Setter Property="HorizontalGridLinesBrush" Value="#DDDDDD" />
+            <Setter Property="VerticalGridLinesBrush" Value="#DDDDDD" />
+            <Setter Property="RowStyle">
+                <Setter.Value>
+
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="LightSkyBlue"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+
+            <Setter Property="CellStyle">
+                <Setter.Value>
+                    <Style TargetType="DataGridCell">
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="CornflowerBlue"/>
+                                <Setter Property="BorderBrush" Value="CornflowerBlue"/>
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter Property="Background" Value="CornflowerBlue"/>
+                                <Setter Property="BorderBrush" Value="CornflowerBlue"/>
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </Style.Triggers>
+                        <Setter Property="Tag" Value="{Binding IsEditing, RelativeSource={RelativeSource Self}}"/>
+                        <Setter Property="Padding" Value="4,3,4,3" />
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="DataGridCell">
+                                    <Border Padding="{TemplateBinding Padding}" 
+                                              BorderBrush="{TemplateBinding BorderBrush}"
+                                              BorderThickness="{TemplateBinding BorderThickness}"
+                                              Background="{TemplateBinding Background}">
+                                        <ContentPresenter />
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Setter Property="FocusVisualStyle">
+                            <Setter.Value>
+                                <Style TargetType="Control">
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                </Style>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--Стиль для элемента TabControl-->
+        <Style TargetType="TabItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border Name="Border" CornerRadius="7" BorderThickness="1.5" BorderBrush="Gray" Margin="1">
+                            <ContentPresenter x:Name="ContentSite"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center"
+                               ContentSource="Header"
+                               Margin="10,7,10,7"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="White"/>
+                                <Setter Property="Foreground" Value="Gray"/>
+                                <Setter Property="FontFamily" Value="Arial Black"/>
+                            </Trigger>
+
+                            <Trigger Property="IsSelected" Value="False">
+                                <Setter TargetName="Border" Property="Background" Value="#a3a3a4"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="FontFamily" Value="Arial Black"/>
+                            </Trigger>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="White"/>
+                                <Setter Property="Foreground" Value="Gray"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--Стиль для TextBox с закругленными краями-->
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="FontFamily" Value="Arial Black"/>
+            <Setter Property="Foreground" Value="Gray"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border"
+                         Background="White"
+                         BorderBrush="Gray"
+                         BorderThickness="1.7"
+                         CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="CornFlowerBlue"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
+    
+    <Grid Background="Gray">
+        <TabControl Background="Gray" BorderThickness="0" Margin="10">
+            <TabItem Header="Торговые данные">
+                <Border Background="White" CornerRadius="15" >
+                    <StackPanel Orientation="Vertical">
+                        <StackPanel Orientation="Horizontal" Margin="5">
+                            <Label Content="Торговая пара:" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
+                            <TextBox x:Name="pair_data_textBox" FontFamily="Arial Black" FontSize="15" Width="108" Height="20" Foreground="Gray"/>
+
+                            <Label Content="Количество:" Margin="5,0,0,0" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
+                            <TextBox x:Name="count_data_textBox" FontFamily="Arial Black" FontSize="15" Height="20" Width="108" Foreground="Gray"/>
+
+                            <Label Content="Интервал свечи(мин.):" Margin="5,0,0,0" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
+                            <TextBox x:Name="candleInterval_data_textBox" FontFamily="Arial Black" FontSize="15" Height="20" Width="92" Foreground="Gray"/>
+
+                            <Label Content="Начиная с:" Margin="5,0,0,0" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
+                            <TextBox x:Name="HH_textBox" FontFamily="Arial Black" FontSize="15" Height="20" Width="33" MaxLength="2" Foreground="Gray"/>
+                            <Label Content=":" FontFamily="Arial Black" FontSize="15" Margin="-3,0,0,0" Foreground="Gray"/>
+
+                            <TextBox x:Name="mm_textBox" FontFamily="Arial Black" Margin="-3,0,0,0" FontSize="15" Height="20" Width="33" MaxLength="2" Foreground="Gray"/>
+                            <Label Content=":" FontFamily="Arial Black" FontSize="15" Margin="-3,0,0,0" Foreground="Gray"/>
+
+                            <TextBox x:Name="ss_textBox" FontFamily="Arial Black" Margin="-3,0,0,0" FontSize="15" Height="20" Width="33" MaxLength="2" Foreground="Gray"/>
+
+                            <Button x:Name="gedTrades_button"
+                                    Template="{StaticResource btTemplate}" 
+                                    Foreground="White"
+                                    Height="27" Width="150"
+                                    Background="MediumSeaGreen"
+                                    VerticalAlignment="Center"
+                                    Margin="6,0,0,0"
+                                    Click="gedTrades_button_Click"
+                                    Content="Получить Трейды">
+                            </Button>
+
+                            <Button x:Name="gedCandles_button"
+                                    Template="{StaticResource btTemplate}" 
+                                    Foreground="White"
+                                    Height="27" Width="150"
+                                    Background="Coral"
+                                    VerticalAlignment="Center"
+                                    Margin="6,0,0,0" 
+                                    Click="gedCandles_button_Click"
+                                    Content="Получить Свечи">
+                            </Button>
+                        </StackPanel>
+
+                        <DataGrid x:Name="tradeCandle_dataGrid" Height="325" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
+                                  Background="Transparent" RowHeaderWidth="0">
+                            
+                        </DataGrid>
+                        
+                    </StackPanel>
+                </Border>
+            </TabItem>
+            <TabItem Header="Подписки">
+                <Border Background="White" CornerRadius="15" >
+                    <StackPanel Orientation="Vertical">
+                        <StackPanel Orientation="Horizontal" Margin="5">
+                            <Label Content="Торговая пара:" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
+                            <TextBox x:Name="pair_subscribe_textBox" FontFamily="Arial Black" FontSize="15" Width="108" Height="20" Foreground="Gray"/>
+
+                            <Label Content="Интервал свечи(мин.):" Margin="5,0,0,0" FontFamily="Arial" FontSize="15" Foreground="Gray"/>
+                            <TextBox x:Name="candleInterval_subscribe_textBox" FontFamily="Arial Black" FontSize="15" Height="20" Width="92" Foreground="Gray"/>
+
+                            <Button x:Name="subscribeTrades_button"
+                                    Template="{StaticResource btTemplate}" 
+                                    Foreground="White"
+                                    Height="27" Width="194"
+                                    Background="MediumSeaGreen"
+                                    VerticalAlignment="Center"
+                                    Margin="6,0,0,0"
+                                    Click="subscribeTrades_button_Click"
+                                    Content="Подписаться на Трейды"/>
+
+                            <Button x:Name="unsubscribeTrades_button"
+                                    Template="{StaticResource btTemplate}" 
+                                    Foreground="White"
+                                    Height="27" Width="194"
+                                    Background="SeaGreen"
+                                    VerticalAlignment="Center"
+                                    Margin="6,0,0,0"
+                                    Click="unsubscribeTrades_button_Click"
+                                    Content="Отписаться от Трейдов"/>
+
+                            <Button x:Name="subscribeCandles_button"
+                                    Template="{StaticResource btTemplate}" 
+                                    Foreground="White"
+                                    Height="27" Width="184"
+                                    Background="Coral"
+                                    VerticalAlignment="Center"
+                                    Margin="6,0,0,0" 
+                                    Click="subscribeCandles_button_Click"
+                                    Content="Подписаться на Свечи"/>
+
+                            <Button x:Name="unsubscribeCandles_button"
+                                    Template="{StaticResource btTemplate}" 
+                                    Foreground="White"
+                                    Height="27" Width="194"
+                                    Background="OrangeRed"
+                                    VerticalAlignment="Center"
+                                    Margin="6,0,0,0"
+                                    Click="unsubscribeCandles_button_Click"
+                                    Content="Отписаться от Свечей"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <DataGrid x:Name="trades_dataGrid" Height="325" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
+                                      Background="Transparent" RowHeaderWidth="0" Width="625">
+                                <DataGrid.RowStyle>
+                                    <Style TargetType="DataGridRow">
+                                        <Setter Property="Foreground" Value="White" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Side}" Value="buy">
+                                                <DataTrigger.Setters>
+                                                    <Setter Property="Background" Value="MediumSeaGreen" />
+                                                </DataTrigger.Setters>
+                                            </DataTrigger>
+
+                                            <DataTrigger Binding="{Binding Side}" Value="sell">
+                                                <DataTrigger.Setters>
+                                                    <Setter Property="Background" Value="OrangeRed" />
+                                                </DataTrigger.Setters>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.RowStyle>
+                            </DataGrid>
+
+                            <DataGrid x:Name="candles_dataGrid" Height="325" Margin="10,0" FontFamily="Arial" CanUserAddRows="False" MinRowHeight="20"
+                                      Background="Transparent" RowHeaderWidth="0" Width="625"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </TabItem>
+            <TabItem Header="Баланс"></TabItem>
+        </TabControl>
     </Grid>
 </Window>

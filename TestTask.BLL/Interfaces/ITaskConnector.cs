@@ -30,8 +30,8 @@ namespace TestTask.BLL.Interfaces
         event Action<Candle> CandleSeriesProcessing;
 
         //Удалил следующие входные параметры:
-        //from - потому что API bitfinex не принимает начала временного интервала, так как возвращает новое, только что появившееся, значение свечи 
-        //to - потому что API bitfinex не принимает конец временного интервала и возвращает только новое значение свечи
+        //from - API bitfinex не принимает начала временного интервала, так как возвращает новое, только что появившееся, значение свечи 
+        //to - API bitfinex не принимает конец временного интервала и возвращает только новое значение свечи
         //Изменил имя входного параметра для указания длительности свечи с periodInSec на periodOnMin, так как минимальное принимаемое значение API bitfinex - 1m
         void SubscribeCandles(string pair, int periodInMin, long? count = 0);
         void UnsubscribeCandles(string pair);
