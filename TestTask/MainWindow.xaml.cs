@@ -32,7 +32,7 @@ public partial class MainWindow : Window
 
     private ObservableCollection<BalanceCurrency_MV> BalanceCurrencies { get; set; } = new();
 
-    private List<string> ValidPairs = new List<string> { "BTCUST", "BTCUSD", "XRPBTC", "XRPUSD", "XMRBTC", "XMRUSD", "DSHUSD", "DSHBTC", "XRPUST", "XMRUST", "DSHUSD" };
+    private List<string> ValidPairs = new List<string> { "BTCUST", "BTCUSD", "XRPBTC", "XRPUSD", "USTUSD", "XMRBTC", "XMRUSD", "DSHUSD", "DSHBTC", "XRPUST", "XMRUST", "DSHUSD" };
 
     public MainWindow(ITestConnector testConnectorService)
     {
@@ -177,75 +177,85 @@ public partial class MainWindow : Window
 
     private void Currency_button_Click(object sender, RoutedEventArgs e)
     {
-        BalanceCurrencies.Clear();
         Button currentButton = (Button)sender;
         string currentCurrency = currentButton.Content.ToString();
-
-        balance_dataGrid.Columns[1].Header = $"Количество в {currentCurrency}";
-
         ConvertUserBalanceAsync(currentCurrency);
     }
 
     //Конвертация всего баланса кошелька
     public async void ConvertUserBalanceAsync(string currency)
     {
-        //Преобразование тикеров под те, что принимаются API
-        if(currency == "USDT") { currency = "UST"; }
-        else if (currency == "DASH") { currency = "DSH"; }
+        try
+        {
+            BalanceCurrencies.Clear();
+            balance_dataGrid.Columns[1].Header = $"Количество в {currency}";
+            //Преобразование тикеров под те, что принимаются API
+            if (currency == "USDT") { currency = "UST"; }
+            else if (currency == "DASH") { currency = "DSH"; }
 
-        await ConvertCurrency("BTC", currency, 1);
-        await ConvertCurrency("XRP", currency, 15000);
-        await ConvertCurrency("XMR", currency, 50);
+            await ConvertCurrency("BTC", currency, 1);
+            await ConvertCurrency("XRP", currency, 15000);
+            await ConvertCurrency("XMR", currency, 50);
+            await ConvertCurrency("DSH", currency, 30);
 
-        if (currency == "UST") { currency = "USD"; } //Некорректно, но биржа bitfinex не имеет пару DSHUSDt (Можно убрать)
-
-        await ConvertCurrency("DSH", currency, 30);
-
-        //Высчитывания полной стоимости кошелька
-        decimal sumCurrencies = BalanceCurrencies.Sum(bc => bc.Count);
-        BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "ИТОГО:", Count = sumCurrencies });
+            //Высчитывания полной стоимости кошелька
+            decimal sumCurrencies = BalanceCurrencies.Sum(bc => bc.Count);
+            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = "ИТОГО:", Count = sumCurrencies });
+        }
+        catch (Exception ex)
+        {
+            BalanceCurrencies.Clear();
+            MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     //Конвертация валюты
     private async Task ConvertCurrency(string from, string to, int count)
     {
-        if (from != to) //Если конвертируется не сама в себя
+        try
         {
-            if (ValidPairs.Contains(from + to)) //Проверка среди валидных пар
+            if (from != to) //Если конвертируется не сама в себя
             {
-                Trade fromToPair = (await _testConnectorService.GetNewTradesAsync(from + to, 1)).FirstOrDefault();
-                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = Math.Round(count * fromToPair.Price, 4) });
-            }
-            else //Если пара не валидна, то валюты меняются местами
-            {
-                if (ValidPairs.Contains(to + from))
+                if (ValidPairs.Contains(from + to)) //Проверка среди валидных пар
                 {
-                    Trade toFromPair = (await _testConnectorService.GetNewTradesAsync(to + from, 1)).FirstOrDefault();
-                    BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = Math.Round(count / toFromPair.Price, 4) });
+                    Trade fromToPair = (await _testConnectorService.GetNewTradesAsync(from + to, 1)).FirstOrDefault();
+                    BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = Math.Round(count * fromToPair.Price, 4) });
                 }
-                else //Если и перестановка не помогла, то конвертируется в USD и с USD в необходимую валюту
+                else //Если пара не валидна, то валюты меняются местами
                 {
-                    if (ValidPairs.Contains(from + "USD"))
+                    if (ValidPairs.Contains(to + from))
                     {
-                        Trade fromUSDPair = (await _testConnectorService.GetNewTradesAsync(from + "USD", 1)).FirstOrDefault();
-                        decimal countInUSD = count * fromUSDPair.Price;
+                        Trade toFromPair = (await _testConnectorService.GetNewTradesAsync(to + from, 1)).FirstOrDefault();
+                        BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = Math.Round(count / toFromPair.Price, 4) });
+                    }
+                    else //Если и перестановка не помогла, то конвертируется в USD и с USD в необходимую валюту
+                    {
+                        if (ValidPairs.Contains(from + "USD"))
+                        {
+                            Trade fromUSDPair = (await _testConnectorService.GetNewTradesAsync(from + "USD", 1)).FirstOrDefault();
+                            decimal countInUSD = count * fromUSDPair.Price;
 
-                        if (ValidPairs.Contains(to + "USD"))
-                        {
-                            Trade toUSDPair = (await _testConnectorService.GetNewTradesAsync(to + "USD", 1)).FirstOrDefault();
-                            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = Math.Round(countInUSD / toUSDPair.Price, 4) });
-                        }
-                        else //Если и это не помогло, то значит такой пары нет на Bitfinex
-                        {
-                            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = 0 });
+                            if (ValidPairs.Contains(to + "USD"))
+                            {
+                                Trade toUSDPair = (await _testConnectorService.GetNewTradesAsync(to + "USD", 1)).FirstOrDefault();
+                                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = Math.Round(countInUSD / toUSDPair.Price, 4) });
+                            }
+                            else //Если и это не помогло, то значит такой пары нет на Bitfinex
+                            {
+                                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = 0 });
+                            }
                         }
                     }
                 }
             }
+            else //Если происходит конвертация сама в себя, то возвращается количество
+            {
+                BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = count });
+            }
         }
-        else //Если происходит конвертация сама в себя, то возвращается количество
+        catch (Exception ex)
         {
-            BalanceCurrencies.Add(new BalanceCurrency_MV { CurrencyName = $"{count} {from}", Count = count });
+            throw new Exception($"{ex.Message}. Повторите попытку позже.");
         }
     }
 }
